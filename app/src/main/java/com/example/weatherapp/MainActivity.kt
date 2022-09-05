@@ -11,7 +11,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.converter.scalars.ScalarsConverterFactory
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,39 +34,48 @@ class MainActivity : AppCompatActivity() {
         tvCityName = findViewById(R.id.txtCityName)
         layoutWeather = findViewById(R.id.layoutWeather)
 
-        //TODO: Create retrofit instance
-         val retrofit = Retrofit.Builder()
-             .baseUrl("https://api.openweathermap.org/data/2.5/weather/")
-                 //convert result(json) in string
-             .addConverterFactory(GsonConverterFactory.create())
-             .build()
+        btnSearch.setOnClickListener{
+            //retrieve the name entered
+            val city = editCityName.text.toString()
+            if(city.isEmpty()){
+                Toast.makeText(this, "City cannot be empty!", Toast.LENGTH_SHORT).show()
+            }
+            else{
+                getWeatherByCity(city)
+            }
+        }
+
+    }
+
+    private fun getWeatherByCity(city: String) {
+        //Retrofit turns your HTTP API into Kotlin Interface
+        //TODO1: Create retrofit instance
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://api.openweathermap.org/data/2.5/weather/")
+            //convert result(json) in string
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
         //create the Weather Service
         val weatherService = retrofit.create(WeatherService::class.java)
 
-        //TODO: Call weather API
-        val result = weatherService.getWeatherByCity()
-        //return apres un service
-        result.enqueue(object : Callback<JsonObject>{
-            override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
+        //TODO2: Call weather API - WEBSERVICE
+        val result = weatherService.getWeatherByCity(city)
+
+        //Asynchronously send the request and notify callback of its response
+        result.enqueue(object : Callback<WeatherResult>{
+            override fun onResponse(call: Call<WeatherResult>, response: Response<WeatherResult>) {
                 if(response.isSuccessful){
                     val result = response.body()
-                    val main = result?.get("main")?.asJsonObject
-                    val temp = main?.get("temp")?.asDouble
-                    val cityName = result?.get("name")?.asString
 
-                    val weather = result?.get("weather")?.asJsonArray
-                    val icon = weather?.get(0)?.asJsonObject?.get("icon")?.asString
-
-                    Picasso.get().load("https://openweathermap/img/w/$icon.png").into(imageWeather)
-
-                    tvTemp.text = "$temp °C"
-                    tvCityName.text = cityName
+                    tvTemp.text = "${result?.main?.temp} °C"
+                    tvCityName.text = result?.name
+                    Picasso.get().load("https://openweathermap.org/img/w/${result?.weather?.get(0)?.icon}.png").into(imageWeather)
 
                     layoutWeather.visibility = View.VISIBLE
                 }
             }
 
-            override fun onFailure(call: Call<JsonObject>, t: Throwable) {
+            override fun onFailure(call: Call<WeatherResult>, t: Throwable) {
                 Toast.makeText(applicationContext,"Server Error", Toast.LENGTH_SHORT).show()
             }
 
